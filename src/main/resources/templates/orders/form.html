@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <title>Create Order</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Create New Order</h1>
+            <a th:href="@{/orders}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Orders
+            </a>
+        </div>
+
+        <form th:action="@{/orders/create}" method="post" class="needs-validation" novalidate>
+            <!-- Customer Selection -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Customer Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3" th:if="${param.customerId == null}">
+                        <label for="customerId" class="form-label">Select Customer</label>
+                        <select class="form-select" id="customerId" name="customerId" required>
+                            <option value="">-- Select Customer --</option>
+                            <option th:each="customer : ${customers}"
+                                    th:value="${customer.id}"
+                                    th:text="${customer.name + ' (' + customer.email + ')'}"
+                                    th:selected="${customer.id == selectedCustomerId}">
+                                John Doe (john@example.com)
+                            </option>
+                        </select>
+                        <div class="invalid-feedback">Please select a customer</div>
+                    </div>
+
+                    <div th:if="${param.customerId != null && selectedCustomer != null}" class="mb-3">
+                        <input type="hidden" name="customerId" th:value="${selectedCustomer.id}" />
+                        <div class="row mb-3">
+                            <div class="col-md-3 fw-bold">Customer:</div>
+                            <div class="col-md-9">
+                                <span th:text="${selectedCustomer.name}">John Doe</span>
+                                (<a th:href="@{/customers/{id}(id=${selectedCustomer.id})}" target="_blank">View</a>)
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-3 fw-bold">Email:</div>
+                            <div class="col-md-9" th:text="${selectedCustomer.email}">john@example.com</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="shippingAddress" class="form-label">Shipping Address</label>
+                        <textarea class="form-control" id="shippingAddress" name="shippingAddress" rows="3" required
+                                  th:text="${selectedCustomer != null ? selectedCustomer.shippingAddress : ''}"></textarea>
+                        <div class="invalid-feedback">Shipping address is required</div>
+                        <div class="form-text" th:if="${selectedCustomer != null}">
+                            Default shipping address from customer profile.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product Selection -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Order Items</h5>
+                    <button type="button" class="btn btn-sm btn-primary" id="addItemBtn">
+                        <i class="fas fa-plus"></i> Add Item
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="orderItemsContainer">
+                        <div class="alert alert-info" id="noItemsMessage">
+                            No items added to this order yet. Click "Add Item" to add products.
+                        </div>
+
+                        <!-- Template for order items (will be cloned by JavaScript) -->
+                        <div class="order-item-template d-none">
+                            <div class="card mb-3 order-item">
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-5">
+                                            <label class="form-label">Product</label>
+                                            <select class="form-select product-select" name="items[INDEX].productId" required>
+                                                <option value="">-- Select Product --</option>
+                                                <option th:each="product : ${products}"
+                                                        th:value="${product.id}"
+                                                        th:text="${product.name + ' (' + product.sku + ')'}">
+                                                    Product Name (SKU001)
+                                                </option>
+                                            </select>
+                                            <div class="invalid-feedback">Please select a product</div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">Price</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">$</span>
+                                                <input type="text" class="form-control product-price" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">Quantity</label>
+                                            <input type="number" class="form-control product-quantity"
+                                                   name="items[INDEX].quantity" min="1" value="1" required>
+                                            <div class="invalid-feedback">Quantity must be at least 1</div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">Subtotal</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">$</span>
+                                                <input type="text" class="form-control product-subtotal" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-1 d-flex align-items-end">
+                                            <button type="button" class="btn btn-danger remove-item-btn">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="inventory-info mt-2"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-3">
+                        <div class="col-md-8"></div>
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Total Items:</span>
+                                        <span id="totalItems">0</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="fw-bold">Total Amount:</span>
+                                        <span class="fw-bold" id="totalAmount">$0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a th:href="@{/orders}" class="btn btn-secondary me-md-2">Cancel</a>
+                <button type="submit" class="btn btn-primary" id="submitBtn" disabled>Create Order</button>
+            </div>
+        </form>
+
+        <!-- JavaScript for dynamic form handling -->
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                const products = /*[[${products}]]*/ [];
+                const productMap = {};
+
+                // Create a map of products by ID for easy lookup
+                products.forEach(product => {
+                    productMap[product.id] = {
+                        name: product.name,
+                        sku: product.sku,
+                        price: product.price,
+                        inventory: product.inventory ? product.inventory.quantity : 0,
+                        threshold: product.thresholdQuantity
+                    };
+                });
+
+                const orderItemsContainer = document.getElementById('orderItemsContainer');
+                const noItemsMessage = document.getElementById('noItemsMessage');
+                const addItemBtn = document.getElementById('addItemBtn');
+                const submitBtn = document.getElementById('submitBtn');
+                const totalItemsEl = document.getElementById('totalItems');
+                const totalAmountEl = document.getElementById('totalAmount');
+                const template = document.querySelector('.order-item-template');
+
+                let itemCount = 0;
+
+                // Add item button click handler
+                addItemBtn.addEventListener('click', function() {
+                    addOrderItem();
+                });
+
+                // Function to add a new order item
+                function addOrderItem() {
+                    // Hide the "no items" message
+                    noItemsMessage.classList.add('d-none');
+
+                    // Clone the template
+                    const newItem = template.querySelector('.order-item').cloneNode(true);
+                    newItem.classList.remove('d-none');
+
+                    // Update the index in the name attributes
+                    const inputs = newItem.querySelectorAll('[name*="INDEX"]');
+                    inputs.forEach(input => {
+                        input.name = input.name.replace('INDEX', itemCount);
+                    });
+
+                    // Add event listeners
+                    const productSelect = newItem.querySelector('.product-select');
+                    const quantityInput = newItem.querySelector('.product-quantity');
+                    const removeBtn = newItem.querySelector('.remove-item-btn');
+
+                    productSelect.addEventListener('change', function() {
+                        updateProductDetails(newItem);
+                    });
+
+                    quantityInput.addEventListener('change', function() {
+                        updateProductDetails(newItem);
+                    });
+
+                    removeBtn.addEventListener('click', function() {
+                        newItem.remove();
+                        itemCount--;
+                        updateTotals();
+
+                        if (itemCount === 0) {
+                            noItemsMessage.classList.remove('d-none');
+                            submitBtn.disabled = true;
+                        }
+                    });
+
+                    // Add the new item to the container
+                    orderItemsContainer.appendChild(newItem);
+                    itemCount++;
+                    updateTotals();
+
+                    // Enable the submit button if we have at least one item
+                    if (itemCount > 0) {
+                        submitBtn.disabled = false;
+                    }
+                }
+
+                // Function to update product details when product or quantity changes
+                function updateProductDetails(itemEl) {
+                    const productSelect = itemEl.querySelector('.product-select');
+                    const priceInput = itemEl.querySelector('.product-price');
+                    const quantityInput = itemEl.querySelector('.product-quantity');
+                    const subtotalInput = itemEl.querySelector('.product-subtotal');
+                    const inventoryInfo = itemEl.querySelector('.inventory-info');
+
+                    const productId = productSelect.value;
+                    const quantity = parseInt(quantityInput.value) || 0;
+
+                    if (productId && productMap[productId]) {
+                        const product = productMap[productId];
+                        const price = product.price;
+                        const subtotal = price * quantity;
+
+                        priceInput.value = price.toFixed(2);
+                        subtotalInput.value = subtotal.toFixed(2);
+
+                        // Update inventory information
+                        if (product.inventory !== undefined) {
+                            const available = product.inventory;
+                            let infoHtml = `<small class="text-muted">Available: ${available}</small>`;
+
+                            if (quantity > available) {
+                                infoHtml = `<small class="text-danger">Warning: Requested quantity (${quantity}) exceeds available stock (${available})</small>`;
+                            } else if (available <= product.threshold) {
+                                infoHtml = `<small class="text-warning">Low stock warning: Only ${available} available</small>`;
+                            }
+
+                            inventoryInfo.innerHTML = infoHtml;
+                        } else {
+                            inventoryInfo.innerHTML = '<small class="text-muted">No inventory information available</small>';
+                        }
+                    } else {
+                        priceInput.value = '';
+                        subtotalInput.value = '';
+                        inventoryInfo.innerHTML = '';
+                    }
+
+                    updateTotals();
+                }
+
+                // Function to update the total items and amount
+                function updateTotals() {
+                    const items = orderItemsContainer.querySelectorAll('.order-item:not(.d-none)');
+                    let totalItems = items.length;
+                    let totalAmount = 0;
+
+                    items.forEach(item => {
+                        const subtotalInput = item.querySelector('.product-subtotal');
+                        if (subtotalInput.value) {
+                            totalAmount += parseFloat(subtotalInput.value);
+                        }
+                    });
+
+                    totalItemsEl.textContent = totalItems;
+                    totalAmountEl.textContent = '$' + totalAmount.toFixed(2);
+                }
+
+                // Form validation
+                const form = document.querySelector('form');
+                form.addEventListener('submit', function(event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+
+                    form.classList.add('was-validated');
+                });
+
+                // Add the first item automatically
+                addOrderItem();
+            });
+        </script>
+    </div>
+</body>
+</html>

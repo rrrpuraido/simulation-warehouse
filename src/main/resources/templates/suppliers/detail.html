@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <title>Supplier Details</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Supplier Details</h1>
+            <div>
+                <a th:href="@{/suppliers}" class="btn btn-secondary me-2">
+                    <i class="fas fa-arrow-left"></i> Back to Suppliers
+                </a>
+                <a th:href="@{/suppliers/{id}/edit(id=${supplier.id})}" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Supplier Information -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Supplier Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">ID:</div>
+                            <div class="col-md-8" th:text="${supplier.id}">1</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Name:</div>
+                            <div class="col-md-8" th:text="${supplier.name}">Supplier Name</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Email:</div>
+                            <div class="col-md-8">
+                                <a th:href="'mailto:' + ${supplier.email}" th:text="${supplier.email}">supplier@example.com</a>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Phone:</div>
+                            <div class="col-md-8">
+                                <a th:if="${supplier.phone}" th:href="'tel:' + ${supplier.phone}" th:text="${supplier.phone}">123-456-7890</a>
+                                <span th:unless="${supplier.phone}">N/A</span>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Contact Person:</div>
+                            <div class="col-md-8" th:text="${supplier.contactPerson ?: 'N/A'}">John Doe</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Address:</div>
+                            <div class="col-md-8" th:text="${supplier.address ?: 'N/A'}">123 Main St, City, Country</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supplier Actions -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a th:href="@{/suppliers/{id}/products(id=${supplier.id})}" class="btn btn-primary">
+                                <i class="fas fa-box"></i> View Supplied Products
+                            </a>
+                            <a th:href="@{/suppliers/{id}/orders(id=${supplier.id})}" class="btn btn-info">
+                                <i class="fas fa-file-invoice"></i> View Purchase Orders
+                            </a>
+                            <a th:href="@{/inventory/restock/supplier/{id}(id=${supplier.id})}" class="btn btn-success">
+                                <i class="fas fa-truck-loading"></i> Create Restock Order
+                            </a>
+                            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                <i class="fas fa-trash"></i> Delete Supplier
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Supplier Statistics -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-8">Total Products Supplied:</div>
+                            <div class="col-md-4 text-end fw-bold" th:text="${suppliedProductsCount ?: 0}">5</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-8">Total Purchase Orders:</div>
+                            <div class="col-md-4 text-end fw-bold" th:text="${purchaseOrdersCount ?: 0}">10</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-8">Last Order Date:</div>
+                            <div class="col-md-4 text-end" th:text="${lastOrderDate != null ? #temporals.format(lastOrderDate, 'yyyy-MM-dd') : 'N/A'}">2023-01-01</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirm Delete</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Are you sure you want to delete supplier <span th:text="${supplier.name}">Supplier Name</span>?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <form th:action="@{/suppliers/{id}/delete(id=${supplier.id})}" method="post">
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

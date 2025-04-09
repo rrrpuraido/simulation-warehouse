@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <title th:text="${product.id == null ? 'Create Product' : 'Edit Product'}">Product Form</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 th:text="${product.id == null ? 'Create Product' : 'Edit Product'}">Product Form</h1>
+            <a th:href="@{/products}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Products
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form th:action="${product.id == null ? '/products/create' : '/products/' + product.id + '/update'}" 
+                      th:object="${product}" method="post" class="needs-validation" novalidate>
+                    
+                    <input type="hidden" th:field="*{id}" />
+                    
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="name" th:field="*{name}" required>
+                        <div class="invalid-feedback">Name is required</div>
+                        <div class="text-danger" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="sku" class="form-label">SKU</label>
+                        <input type="text" class="form-control" id="sku" th:field="*{sku}" required>
+                        <div class="invalid-feedback">SKU is required</div>
+                        <div class="text-danger" th:if="${#fields.hasErrors('sku')}" th:errors="*{sku}"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" th:field="*{description}" rows="3"></textarea>
+                        <div class="text-danger" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="price" class="form-label">Price ($)</label>
+                            <input type="number" class="form-control" id="price" th:field="*{price}" step="0.01" min="0" required>
+                            <div class="invalid-feedback">Valid price is required</div>
+                            <div class="text-danger" th:if="${#fields.hasErrors('price')}" th:errors="*{price}"></div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="thresholdQuantity" class="form-label">Threshold Quantity</label>
+                            <input type="number" class="form-control" id="thresholdQuantity" th:field="*{thresholdQuantity}" min="0" required>
+                            <div class="invalid-feedback">Threshold quantity is required</div>
+                            <div class="text-danger" th:if="${#fields.hasErrors('thresholdQuantity')}" th:errors="*{thresholdQuantity}"></div>
+                            <small class="form-text text-muted">Minimum inventory level before restock alert is triggered</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Inventory section (only for editing existing products) -->
+                    <div class="mb-3" th:if="${product.id != null && inventory != null}">
+                        <label for="inventoryQuantity" class="form-label">Current Inventory</label>
+                        <input type="number" class="form-control" id="inventoryQuantity" name="inventoryQuantity" 
+                               th:value="${inventory.quantity}" min="0">
+                        <small class="form-text text-muted">Current quantity in stock</small>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a th:href="@{/products}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Form validation script -->
+        <script>
+            // Example starter JavaScript for disabling form submissions if there are invalid fields
+            (function () {
+                'use strict'
+                
+                // Fetch all the forms we want to apply custom Bootstrap validation styles to
+                var forms = document.querySelectorAll('.needs-validation')
+                
+                // Loop over them and prevent submission
+                Array.prototype.slice.call(forms)
+                    .forEach(function (form) {
+                        form.addEventListener('submit', function (event) {
+                            if (!form.checkValidity()) {
+                                event.preventDefault()
+                                event.stopPropagation()
+                            }
+                            
+                            form.classList.add('was-validated')
+                        }, false)
+                    })
+            })()
+        </script>
+    </div>
+</body>
+</html>

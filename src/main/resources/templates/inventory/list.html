@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <title>Inventory</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Inventory</h1>
+            <div>
+                <a th:href="@{/inventory/low}" class="btn btn-warning me-2">
+                    <i class="fas fa-exclamation-triangle"></i> Low Stock Items
+                </a>
+                <a th:href="@{/inventory/export}" class="btn btn-secondary">
+                    <i class="fas fa-file-export"></i> Export
+                </a>
+            </div>
+        </div>
+
+        <!-- Search Form -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form th:action="@{/inventory}" method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" id="searchTerm" name="searchTerm" 
+                               th:value="${searchTerm}" placeholder="Search by product name or SKU">
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" id="stockStatus" name="stockStatus">
+                            <option value="">All Stock Status</option>
+                            <option value="low" th:selected="${stockStatus == 'low'}">Low Stock</option>
+                            <option value="out" th:selected="${stockStatus == 'out'}">Out of Stock</option>
+                            <option value="normal" th:selected="${stockStatus == 'normal'}">Normal Stock</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                    <div class="col-md-2">
+                        <a th:href="@{/inventory}" class="btn btn-secondary w-100">
+                            <i class="fas fa-redo"></i> Reset
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Inventory Table -->
+        <div class="card">
+            <div class="card-body">
+                <div th:if="${#lists.isEmpty(inventoryItems)}" class="alert alert-info">
+                    No inventory items found.
+                </div>
+                <div th:if="${not #lists.isEmpty(inventoryItems)}">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Product</th>
+                                <th>SKU</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th>Threshold</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="item : ${inventoryItems}">
+                                <td th:text="${item.id}">1</td>
+                                <td>
+                                    <a th:href="@{/products/{id}(id=${item.product.id})}" th:text="${item.product.name}">
+                                        Product Name
+                                    </a>
+                                </td>
+                                <td th:text="${item.product.sku}">SKU001</td>
+                                <td th:text="${'$' + #numbers.formatDecimal(item.product.price, 1, 2)}">$10.00</td>
+                                <td>
+                                    <span th:text="${item.quantity}"
+                                          th:class="${item.quantity <= item.product.thresholdQuantity ? 'text-danger fw-bold' : 
+                                                    (item.quantity <= item.product.thresholdQuantity * 2 ? 'text-warning fw-bold' : '')}">
+                                        10
+                                    </span>
+                                </td>
+                                <td th:text="${item.product.thresholdQuantity}">5</td>
+                                <td>
+                                    <span th:if="${item.quantity == 0}" class="badge bg-danger">Out of Stock</span>
+                                    <span th:if="${item.quantity > 0 && item.quantity <= item.product.thresholdQuantity}" class="badge bg-warning">Low Stock</span>
+                                    <span th:if="${item.quantity > item.product.thresholdQuantity}" class="badge bg-success">In Stock</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a th:href="@{/inventory/product/{id}/add(id=${item.product.id})}" class="btn btn-sm btn-success">
+                                            <i class="fas fa-plus"></i>
+                                        </a>
+                                        <a th:href="@{/inventory/product/{id}/reduce(id=${item.product.id})}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-minus"></i>
+                                        </a>
+                                        <a th:href="@{/inventory/product/{id}/edit(id=${item.product.id})}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <!-- Pagination -->
+                    <nav th:if="${totalPages > 1}">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                                <a class="page-link" th:href="@{/inventory(page=0, size=${size}, searchTerm=${searchTerm}, stockStatus=${stockStatus})}" aria-label="First">
+                                    <span aria-hidden="true">&laquo;&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                                <a class="page-link" th:href="@{/inventory(page=${currentPage - 1}, size=${size}, searchTerm=${searchTerm}, stockStatus=${stockStatus})}" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}" 
+                                th:classappend="${currentPage == i} ? 'active' : ''">
+                                <a class="page-link" th:href="@{/inventory(page=${i}, size=${size}, searchTerm=${searchTerm}, stockStatus=${stockStatus})}" th:text="${i + 1}">1</a>
+                            </li>
+                            <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''">
+                                <a class="page-link" th:href="@{/inventory(page=${currentPage + 1}, size=${size}, searchTerm=${searchTerm}, stockStatus=${stockStatus})}" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''">
+                                <a class="page-link" th:href="@{/inventory(page=${totalPages - 1}, size=${size}, searchTerm=${searchTerm}, stockStatus=${stockStatus})}" aria-label="Last">
+                                    <span aria-hidden="true">&raquo;&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Summary -->
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card text-white bg-success mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">In Stock Items</h5>
+                        <p class="card-text display-4" th:text="${inStockCount}">15</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-warning mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Low Stock Items</h5>
+                        <p class="card-text display-4" th:text="${lowStockCount}">3</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-danger mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Out of Stock Items</h5>
+                        <p class="card-text display-4" th:text="${outOfStockCount}">2</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

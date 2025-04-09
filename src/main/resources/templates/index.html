@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <title>Dashboard - Warehouse Management System</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Dashboard</h1>
+            <div>
+                <a th:href="@{/orders/new}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> New Order
+                </a>
+            </div>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-white bg-primary mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Total Orders</h5>
+                        <p class="card-text display-4" th:text="${metrics.totalOrders}">150</p>
+                        <p class="card-text">
+                            <span th:text="${metrics.ordersToday}">12</span> today
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-success mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Revenue</h5>
+                        <p class="card-text display-4" th:text="${'$' + #numbers.formatDecimal(metrics.totalRevenue, 1, 2)}">$15,000.00</p>
+                        <p class="card-text">
+                            <span th:text="${'$' + #numbers.formatDecimal(metrics.revenueToday, 1, 2)}">$1,200.00</span> today
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-info mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Customers</h5>
+                        <p class="card-text display-4" th:text="${metrics.totalCustomers}">45</p>
+                        <p class="card-text">
+                            <span th:text="${metrics.newCustomersToday}">2</span> new today
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white bg-warning mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">Low Stock Items</h5>
+                        <p class="card-text display-4" th:text="${metrics.lowStockCount}">8</p>
+                        <p class="card-text">
+                            <a th:href="@{/inventory/low}" class="text-white">View all</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Recent Orders -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Recent Orders</h5>
+                        <a th:href="@{/orders}" class="btn btn-sm btn-primary">View All</a>
+                    </div>
+                    <div class="card-body">
+                        <div th:if="${#lists.isEmpty(recentOrders)}" class="alert alert-info">
+                            No recent orders found.
+                        </div>
+                        <div th:if="${not #lists.isEmpty(recentOrders)}">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Customer</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="order : ${recentOrders}">
+                                        <td>
+                                            <a th:href="@{/orders/{id}(id=${order.id})}" th:text="${order.id}">1</a>
+                                        </td>
+                                        <td th:text="${order.customer.name}">John Doe</td>
+                                        <td th:text="${#temporals.format(order.orderDate, 'yyyy-MM-dd HH:mm')}">2023-01-01 12:00</td>
+                                        <td>
+                                            <span th:class="${'badge ' +
+                                                (order.status == T(com.example.warehouse.model.OrderStatus).CREATED ? 'bg-secondary' :
+                                                (order.status == T(com.example.warehouse.model.OrderStatus).PAID ? 'bg-primary' :
+                                                (order.status == T(com.example.warehouse.model.OrderStatus).SHIPPED ? 'bg-info' :
+                                                (order.status == T(com.example.warehouse.model.OrderStatus).COMPLETED ? 'bg-success' : 'bg-dark'))))}">
+                                                <span th:text="${order.status}">CREATED</span>
+                                            </span>
+                                        </td>
+                                        <td th:text="${'$' + #numbers.formatDecimal(order.totalAmount, 1, 2)}">$100.00</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Low Stock Items -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Low Stock Items</h5>
+                        <a th:href="@{/inventory/low}" class="btn btn-sm btn-warning">View All</a>
+                    </div>
+                    <div class="card-body">
+                        <div th:if="${#lists.isEmpty(lowStockItems)}" class="alert alert-info">
+                            No low stock items found.
+                        </div>
+                        <div th:if="${not #lists.isEmpty(lowStockItems)}">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>SKU</th>
+                                        <th>Quantity</th>
+                                        <th>Threshold</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="item : ${lowStockItems}">
+                                        <td>
+                                            <a th:href="@{/products/{id}(id=${item.product.id})}" th:text="${item.product.name}">Product Name</a>
+                                        </td>
+                                        <td th:text="${item.product.sku}">SKU001</td>
+                                        <td>
+                                            <span th:text="${item.quantity}"
+                                                  th:class="${item.quantity <= item.product.thresholdQuantity ? 'text-danger fw-bold' : ''}">
+                                                3
+                                            </span>
+                                        </td>
+                                        <td th:text="${item.product.thresholdQuantity}">5</td>
+                                        <td>
+                                            <a th:href="@{/inventory/product/{id}/add(id=${item.product.id})}" class="btn btn-sm btn-success">
+                                                <i class="fas fa-plus"></i> Add Stock
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Top Customers -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Top Customers</h5>
+                        <a th:href="@{/customers}" class="btn btn-sm btn-info">View All</a>
+                    </div>
+                    <div class="card-body">
+                        <div th:if="${#lists.isEmpty(topCustomers)}" class="alert alert-info">
+                            No customer data available.
+                        </div>
+                        <div th:if="${not #lists.isEmpty(topCustomers)}">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>Orders</th>
+                                        <th>Total Spent</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="customer : ${topCustomers}">
+                                        <td>
+                                            <a th:href="@{/customers/{id}(id=${customer['id']})}" th:text="${customer['name']}">John Doe</a>
+                                        </td>
+                                        <td th:text="${customer['orderCount']}">10</td>
+                                        <td th:text="${'$' + #numbers.formatDecimal(customer['totalSpent'], 1, 2)}">$1,000.00</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Products -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Top Products</h5>
+                        <a th:href="@{/products}" class="btn btn-sm btn-primary">View All</a>
+                    </div>
+                    <div class="card-body">
+                        <div th:if="${#lists.isEmpty(topProducts)}" class="alert alert-info">
+                            No product data available.
+                        </div>
+                        <div th:if="${not #lists.isEmpty(topProducts)}">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>SKU</th>
+                                        <th>Units Sold</th>
+                                        <th>Revenue</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="product : ${topProducts}">
+                                        <td>
+                                            <a th:href="@{/products/{id}(id=${product.id})}" th:text="${product.name}">Product Name</a>
+                                        </td>
+                                        <td th:text="${product.sku}">SKU001</td>
+                                        <td th:text="${product['unitsSold']}">50</td>
+                                        <td th:text="${'$' + #numbers.formatDecimal(product['revenue'], 1, 2)}">$500.00</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

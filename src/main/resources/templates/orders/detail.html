@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <title>Order Details</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Order #<span th:text="${order.id}">1</span></h1>
+            <div>
+                <a th:href="@{/orders}" class="btn btn-secondary me-2">
+                    <i class="fas fa-arrow-left"></i> Back to Orders
+                </a>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        Actions
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li th:if="${order.status == T(com.example.warehouse.model.OrderStatus).CREATED}">
+                            <form th:action="@{/orders/{id}/status/PAID(id=${order.id})}" method="post">
+                                <button type="submit" class="dropdown-item">Mark as Paid</button>
+                            </form>
+                        </li>
+                        <li th:if="${order.status == T(com.example.warehouse.model.OrderStatus).PAID}">
+                            <form th:action="@{/orders/{id}/status/SHIPPED(id=${order.id})}" method="post">
+                                <button type="submit" class="dropdown-item">Mark as Shipped</button>
+                            </form>
+                        </li>
+                        <li th:if="${order.status == T(com.example.warehouse.model.OrderStatus).SHIPPED}">
+                            <form th:action="@{/orders/{id}/status/COMPLETED(id=${order.id})}" method="post">
+                                <button type="submit" class="dropdown-item">Mark as Completed</button>
+                            </form>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <button type="button" class="dropdown-item text-danger" 
+                                    data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                Delete Order
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Status -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>Status</h5>
+                        <div class="d-flex align-items-center">
+                            <span th:class="${'badge me-2 ' + 
+                                (order.status == T(com.example.warehouse.model.OrderStatus).CREATED ? 'bg-secondary' : 
+                                (order.status == T(com.example.warehouse.model.OrderStatus).PAID ? 'bg-primary' : 
+                                (order.status == T(com.example.warehouse.model.OrderStatus).SHIPPED ? 'bg-info' : 
+                                (order.status == T(com.example.warehouse.model.OrderStatus).COMPLETED ? 'bg-success' : 'bg-dark'))))}">
+                                <span th:text="${order.status}">CREATED</span>
+                            </span>
+                            <span th:text="${#temporals.format(order.orderDate, 'MMMM dd, yyyy HH:mm')}">January 1, 2023 12:00</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Total Amount</h5>
+                        <h3 th:text="${'$' + #numbers.formatDecimal(order.totalAmount, 1, 2)}">$100.00</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Customer Information -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Customer Information</h5>
+                        <a th:href="@{/customers/{id}(id=${order.customer.id})}" class="btn btn-sm btn-info">
+                            <i class="fas fa-user"></i> View Customer
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Name:</div>
+                            <div class="col-md-8" th:text="${order.customer.name}">John Doe</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Email:</div>
+                            <div class="col-md-8" th:text="${order.customer.email}">john@example.com</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shipping Information -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Shipping Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Address:</div>
+                            <div class="col-md-8" th:text="${order.shippingAddress ?: order.customer.shippingAddress}">123 Main St</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Items -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Order Items</h5>
+            </div>
+            <div class="card-body">
+                <div th:if="${#lists.isEmpty(order.items)}" class="alert alert-warning">
+                    No items in this order.
+                </div>
+                <div th:if="${not #lists.isEmpty(order.items)}">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>SKU</th>
+                                <th>Unit Price</th>
+                                <th>Quantity</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="item : ${order.items}">
+                                <td>
+                                    <a th:href="@{/products/{id}(id=${item.product.id})}" th:text="${item.product.name}">
+                                        Product Name
+                                    </a>
+                                </td>
+                                <td th:text="${item.product.sku}">SKU001</td>
+                                <td th:text="${'$' + #numbers.formatDecimal(item.unitPrice, 1, 2)}">$10.00</td>
+                                <td th:text="${item.quantity}">2</td>
+                                <td th:text="${'$' + #numbers.formatDecimal(item.subtotal, 1, 2)}">$20.00</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="4" class="text-end fw-bold">Total:</td>
+                                <td class="fw-bold" th:text="${'$' + #numbers.formatDecimal(order.totalAmount, 1, 2)}">$100.00</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Timeline -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Order Timeline</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-secondary me-2">CREATED</span>
+                            Order created
+                        </div>
+                        <span th:text="${#temporals.format(order.orderDate, 'yyyy-MM-dd HH:mm')}">2023-01-01 12:00</span>
+                    </li>
+                    <li th:if="${order.status.ordinal() >= T(com.example.warehouse.model.OrderStatus).PAID.ordinal()}" 
+                        class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-primary me-2">PAID</span>
+                            Payment received
+                        </div>
+                        <span><!-- Date would be here if we tracked status change dates --></span>
+                    </li>
+                    <li th:if="${order.status.ordinal() >= T(com.example.warehouse.model.OrderStatus).SHIPPED.ordinal()}" 
+                        class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-info me-2">SHIPPED</span>
+                            Order shipped
+                        </div>
+                        <span><!-- Date would be here if we tracked status change dates --></span>
+                    </li>
+                    <li th:if="${order.status.ordinal() >= T(com.example.warehouse.model.OrderStatus).COMPLETED.ordinal()}" 
+                        class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-success me-2">COMPLETED</span>
+                            Order completed
+                        </div>
+                        <span><!-- Date would be here if we tracked status change dates --></span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirm Delete</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        Are you sure you want to delete order #<span th:text="${order.id}">1</span>?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <form th:action="@{/orders/{id}/delete(id=${order.id})}" method="post">
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
