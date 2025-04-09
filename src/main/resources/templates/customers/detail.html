@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <title>Customer Details</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Customer Details</h1>
+            <div>
+                <a th:href="@{/customers}" class="btn btn-secondary me-2">
+                    <i class="fas fa-arrow-left"></i> Back to Customers
+                </a>
+                <a th:href="@{/customers/{id}/edit(id=${customer.id})}" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Customer Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-3 fw-bold">ID:</div>
+                    <div class="col-md-9" th:text="${customer.id}">1</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3 fw-bold">Name:</div>
+                    <div class="col-md-9" th:text="${customer.name}">John Doe</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3 fw-bold">Email:</div>
+                    <div class="col-md-9" th:text="${customer.email}">john@example.com</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-3 fw-bold">Shipping Address:</div>
+                    <div class="col-md-9" th:text="${customer.shippingAddress}">123 Main St</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer Orders -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Orders</h5>
+                <a th:href="@{/orders/customer/{id}/new(id=${customer.id})}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus"></i> New Order
+                </a>
+            </div>
+            <div class="card-body">
+                <div th:if="${#lists.isEmpty(orders)}" class="alert alert-info">
+                    No orders found for this customer.
+                </div>
+                <div th:if="${not #lists.isEmpty(orders)}">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Total Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="order : ${orders}">
+                                <td th:text="${order.id}">1</td>
+                                <td th:text="${#temporals.format(order.orderDate, 'yyyy-MM-dd HH:mm')}">2023-01-01 12:00</td>
+                                <td>
+                                    <span th:class="${'badge ' + 
+                                        (order.status == T(com.example.warehouse.model.OrderStatus).CREATED ? 'bg-secondary' : 
+                                        (order.status == T(com.example.warehouse.model.OrderStatus).PAID ? 'bg-primary' : 
+                                        (order.status == T(com.example.warehouse.model.OrderStatus).SHIPPED ? 'bg-info' : 
+                                        (order.status == T(com.example.warehouse.model.OrderStatus).COMPLETED ? 'bg-success' : 'bg-dark'))))}">
+                                        <span th:text="${order.status}">CREATED</span>
+                                    </span>
+                                </td>
+                                <td th:text="${'$' + #numbers.formatDecimal(order.totalAmount, 1, 2)}">$100.00</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a th:href="@{/orders/{id}(id=${order.id})}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

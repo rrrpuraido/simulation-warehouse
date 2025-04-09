@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <title th:text="${action == 'add' ? 'Add Inventory' : (action == 'reduce' ? 'Reduce Inventory' : 'Update Inventory')}">Update Inventory</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 th:text="${action == 'add' ? 'Add Inventory' : (action == 'reduce' ? 'Reduce Inventory' : 'Update Inventory')}">Update Inventory</h1>
+            <a th:href="@{/inventory}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Inventory
+            </a>
+        </div>
+
+        <div class="row">
+            <!-- Product Information -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Product Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Product:</div>
+                            <div class="col-md-8">
+                                <span th:text="${product.name}">Product Name</span>
+                                (<a th:href="@{/products/{id}(id=${product.id})}" target="_blank">View</a>)
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">SKU:</div>
+                            <div class="col-md-8" th:text="${product.sku}">SKU001</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Price:</div>
+                            <div class="col-md-8" th:text="${'$' + #numbers.formatDecimal(product.price, 1, 2)}">$10.00</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4 fw-bold">Threshold:</div>
+                            <div class="col-md-8" th:text="${product.thresholdQuantity}">5</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Inventory -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Current Inventory</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-3">
+                            <h1 class="display-4" th:text="${inventory.quantity}"
+                                th:classappend="${inventory.quantity <= product.thresholdQuantity ? 'text-danger' : 'text-success'}">
+                                10
+                            </h1>
+                            <p class="text-muted">Current Stock</p>
+                        </div>
+                        
+                        <div class="progress mb-3" style="height: 20px;">
+                            <div class="progress-bar" role="progressbar" 
+                                 th:style="'width: ' + ${inventory.quantity <= product.thresholdQuantity * 3 ? (inventory.quantity * 100 / (product.thresholdQuantity * 3)) : 100} + '%'" 
+                                 th:classappend="${inventory.quantity <= product.thresholdQuantity ? 'bg-danger' : 'bg-success'}"
+                                 th:aria-valuenow="${inventory.quantity}" aria-valuemin="0" th:aria-valuemax="${product.thresholdQuantity * 3}">
+                            </div>
+                        </div>
+                        
+                        <div class="alert" th:classappend="${inventory.quantity <= product.thresholdQuantity ? 'alert-danger' : 'alert-success'}">
+                            <span th:if="${inventory.quantity <= product.thresholdQuantity}">
+                                <i class="fas fa-exclamation-triangle"></i> Low stock! Below threshold of <span th:text="${product.thresholdQuantity}">5</span>.
+                            </span>
+                            <span th:unless="${inventory.quantity <= product.thresholdQuantity}">
+                                <i class="fas fa-check-circle"></i> Stock level is good.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory Update Form -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0" th:text="${action == 'add' ? 'Add Stock' : (action == 'reduce' ? 'Reduce Stock' : 'Update Stock')}">Update Stock</h5>
+            </div>
+            <div class="card-body">
+                <form th:action="${action == 'add' ? '/inventory/product/' + product.id + '/add/submit' : 
+                                 (action == 'reduce' ? '/inventory/product/' + product.id + '/reduce/submit' : 
+                                 '/inventory/product/' + product.id + '/edit/submit')}" 
+                      method="post" class="needs-validation" novalidate>
+                    
+                    <div class="mb-3">
+                        <label for="currentQuantity" class="form-label">Current Quantity</label>
+                        <input type="number" class="form-control" id="currentQuantity" th:value="${inventory.quantity}" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="quantity" class="form-label" th:text="${action == 'add' ? 'Quantity to Add' : (action == 'reduce' ? 'Quantity to Reduce' : 'New Quantity')}">Quantity</label>
+                        <input type="number" class="form-control" id="quantity" name="quantity" 
+                               th:min="${action == 'reduce' ? 1 : 0}" 
+                               th:max="${action == 'reduce' ? inventory.quantity : ''}"
+                               value="1" required>
+                        <div class="invalid-feedback" th:text="${action == 'add' ? 'Please enter a valid quantity to add' : 
+                                                              (action == 'reduce' ? 'Please enter a valid quantity to reduce' : 
+                                                              'Please enter a valid quantity')}">
+                            Please enter a valid quantity
+                        </div>
+                        <div class="form-text" th:if="${action == 'reduce' && inventory.quantity <= product.thresholdQuantity}">
+                            <i class="fas fa-exclamation-triangle text-warning"></i> Warning: Stock is already below or at threshold.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3" th:if="${action != 'edit'}">
+                        <label for="newQuantity" class="form-label">New Quantity (Preview)</label>
+                        <input type="number" class="form-control" id="newQuantity" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Reason</label>
+                        <select class="form-select" id="reason" name="reason" required>
+                            <option value="">-- Select Reason --</option>
+                            <option th:if="${action == 'add'}" value="purchase">Purchase from Supplier</option>
+                            <option th:if="${action == 'add'}" value="return">Customer Return</option>
+                            <option th:if="${action == 'add'}" value="adjustment">Inventory Adjustment</option>
+                            <option th:if="${action == 'reduce'}" value="sale">Sale</option>
+                            <option th:if="${action == 'reduce'}" value="damage">Damaged/Expired</option>
+                            <option th:if="${action == 'reduce'}" value="adjustment">Inventory Adjustment</option>
+                            <option th:if="${action == 'edit'}" value="correction">Data Correction</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <div class="invalid-feedback">Please select a reason</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a th:href="@{/inventory}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- JavaScript for form handling -->
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                const action = /*[[${action}]]*/ 'edit';
+                const currentQuantityInput = document.getElementById('currentQuantity');
+                const quantityInput = document.getElementById('quantity');
+                const newQuantityInput = document.getElementById('newQuantity');
+                
+                // Update new quantity preview when quantity changes
+                function updateNewQuantity() {
+                    const currentQuantity = parseInt(currentQuantityInput.value) || 0;
+                    const quantity = parseInt(quantityInput.value) || 0;
+                    
+                    if (action === 'add') {
+                        newQuantityInput.value = currentQuantity + quantity;
+                    } else if (action === 'reduce') {
+                        newQuantityInput.value = Math.max(0, currentQuantity - quantity);
+                    }
+                }
+                
+                // Add event listener to quantity input
+                if (action !== 'edit') {
+                    quantityInput.addEventListener('input', updateNewQuantity);
+                    // Initialize new quantity
+                    updateNewQuantity();
+                }
+                
+                // Form validation
+                const form = document.querySelector('form');
+                form.addEventListener('submit', function(event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    
+                    form.classList.add('was-validated');
+                });
+            });
+        </script>
+    </div>
+</body>
+</html>

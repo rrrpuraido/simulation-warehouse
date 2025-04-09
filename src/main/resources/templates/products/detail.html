@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <title>Product Details</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Product Details</h1>
+            <div>
+                <a th:href="@{/products}" class="btn btn-secondary me-2">
+                    <i class="fas fa-arrow-left"></i> Back to Products
+                </a>
+                <a th:href="@{/products/{id}/edit(id=${product.id})}" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Product Information -->
+            <div class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Product Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-3 fw-bold">ID:</div>
+                            <div class="col-md-9" th:text="${product.id}">1</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-3 fw-bold">Name:</div>
+                            <div class="col-md-9" th:text="${product.name}">Product Name</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-3 fw-bold">SKU:</div>
+                            <div class="col-md-9" th:text="${product.sku}">SKU001</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-3 fw-bold">Price:</div>
+                            <div class="col-md-9" th:text="${'$' + #numbers.formatDecimal(product.price, 1, 2)}">$10.00</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-3 fw-bold">Description:</div>
+                            <div class="col-md-9" th:text="${product.description ?: 'No description available'}">Product description</div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-3 fw-bold">Threshold Quantity:</div>
+                            <div class="col-md-9" th:text="${product.thresholdQuantity}">5</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Information -->
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Inventory</h5>
+                        <a th:if="${inventory != null}" th:href="@{/inventory/product/{id}/edit(id=${product.id})}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-edit"></i> Update
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <div th:if="${inventory == null}" class="alert alert-warning">
+                            No inventory information available.
+                        </div>
+                        <div th:if="${inventory != null}">
+                            <div class="text-center mb-3">
+                                <h1 class="display-4" th:text="${inventory.quantity}"
+                                    th:classappend="${inventory.quantity <= product.thresholdQuantity ? 'text-danger' : 'text-success'}">
+                                    10
+                                </h1>
+                                <p class="text-muted">Current Stock</p>
+                            </div>
+                            
+                            <div class="progress mb-3" style="height: 20px;">
+                                <div class="progress-bar" role="progressbar" 
+                                     th:style="'width: ' + ${inventory.quantity <= product.thresholdQuantity * 3 ? (inventory.quantity * 100 / (product.thresholdQuantity * 3)) : 100} + '%'" 
+                                     th:classappend="${inventory.quantity <= product.thresholdQuantity ? 'bg-danger' : 'bg-success'}"
+                                     th:aria-valuenow="${inventory.quantity}" aria-valuemin="0" th:aria-valuemax="${product.thresholdQuantity * 3}">
+                                </div>
+                            </div>
+                            
+                            <div class="alert" th:classappend="${inventory.quantity <= product.thresholdQuantity ? 'alert-danger' : 'alert-success'}">
+                                <span th:if="${inventory.quantity <= product.thresholdQuantity}">
+                                    <i class="fas fa-exclamation-triangle"></i> Low stock! Below threshold of <span th:text="${product.thresholdQuantity}">5</span>.
+                                </span>
+                                <span th:unless="${inventory.quantity <= product.thresholdQuantity}">
+                                    <i class="fas fa-check-circle"></i> Stock level is good.
+                                </span>
+                            </div>
+                            
+                            <div class="d-grid gap-2">
+                                <a th:href="@{/inventory/product/{id}/add(id=${product.id})}" class="btn btn-success">
+                                    <i class="fas fa-plus"></i> Add Stock
+                                </a>
+                                <a th:href="@{/inventory/product/{id}/reduce(id=${product.id})}" class="btn btn-warning">
+                                    <i class="fas fa-minus"></i> Reduce Stock
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Orders with this Product -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Recent Orders</h5>
+            </div>
+            <div class="card-body">
+                <div th:if="${#lists.isEmpty(orders)}" class="alert alert-info">
+                    No orders found for this product.
+                </div>
+                <div th:if="${not #lists.isEmpty(orders)}">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Customer</th>
+                                <th>Date</th>
+                                <th>Quantity</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="orderItem : ${orders}">
+                                <td th:text="${orderItem.order.id}">1</td>
+                                <td th:text="${orderItem.order.customer.name}">John Doe</td>
+                                <td th:text="${#temporals.format(orderItem.order.orderDate, 'yyyy-MM-dd HH:mm')}">2023-01-01 12:00</td>
+                                <td th:text="${orderItem.quantity}">2</td>
+                                <td>
+                                    <span th:class="${'badge ' + 
+                                        (orderItem.order.status == T(com.example.warehouse.model.OrderStatus).CREATED ? 'bg-secondary' : 
+                                        (orderItem.order.status == T(com.example.warehouse.model.OrderStatus).PAID ? 'bg-primary' : 
+                                        (orderItem.order.status == T(com.example.warehouse.model.OrderStatus).SHIPPED ? 'bg-info' : 
+                                        (orderItem.order.status == T(com.example.warehouse.model.OrderStatus).COMPLETED ? 'bg-success' : 'bg-dark'))))}">
+                                        <span th:text="${orderItem.order.status}">CREATED</span>
+                                    </span>
+                                </td>
+                                <td>
+                                    <a th:href="@{/orders/{id}(id=${orderItem.order.id})}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye"></i> View Order
+                                    </a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

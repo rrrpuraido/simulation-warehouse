@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/layout}">
+<head>
+    <title>Orders</title>
+</head>
+<body>
+    <div layout:fragment="content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Orders</h1>
+            <a th:href="@{/orders/new}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> New Order
+            </a>
+        </div>
+
+        <!-- Search and Filter Form -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form th:action="@{/orders}" method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="customerId" class="form-label">Customer</label>
+                        <select class="form-select" id="customerId" name="customerId">
+                            <option value="">All Customers</option>
+                            <option th:each="customer : ${customers}" 
+                                    th:value="${customer.id}" 
+                                    th:text="${customer.name}"
+                                    th:selected="${customer.id == selectedCustomerId}">
+                                Customer Name
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">All Statuses</option>
+                            <option th:each="statusOption : ${T(com.example.warehouse.model.OrderStatus).values()}" 
+                                    th:value="${statusOption}" 
+                                    th:text="${statusOption}"
+                                    th:selected="${statusOption == selectedStatus}">
+                                CREATED
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="dateRange" class="form-label">Date Range</label>
+                        <select class="form-select" id="dateRange" name="dateRange">
+                            <option value="">All Time</option>
+                            <option value="today" th:selected="${dateRange == 'today'}">Today</option>
+                            <option value="yesterday" th:selected="${dateRange == 'yesterday'}">Yesterday</option>
+                            <option value="thisWeek" th:selected="${dateRange == 'thisWeek'}">This Week</option>
+                            <option value="lastWeek" th:selected="${dateRange == 'lastWeek'}">Last Week</option>
+                            <option value="thisMonth" th:selected="${dateRange == 'thisMonth'}">This Month</option>
+                            <option value="lastMonth" th:selected="${dateRange == 'lastMonth'}">Last Month</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end w-100">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                            <a th:href="@{/orders}" class="btn btn-secondary">
+                                <i class="fas fa-redo"></i> Reset
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="card">
+            <div class="card-body">
+                <div th:if="${#lists.isEmpty(orders)}" class="alert alert-info">
+                    No orders found.
+                </div>
+                <div th:if="${not #lists.isEmpty(orders)}">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Customer</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Total Amount</th>
+                                <th>Items</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="order : ${orders}">
+                                <td th:text="${order.id}">1</td>
+                                <td>
+                                    <a th:href="@{/customers/{id}(id=${order.customer.id})}" th:text="${order.customer.name}">
+                                        John Doe
+                                    </a>
+                                </td>
+                                <td th:text="${#temporals.format(order.orderDate, 'yyyy-MM-dd HH:mm')}">2023-01-01 12:00</td>
+                                <td>
+                                    <span th:class="${'badge ' + 
+                                        (order.status == T(com.example.warehouse.model.OrderStatus).CREATED ? 'bg-secondary' : 
+                                        (order.status == T(com.example.warehouse.model.OrderStatus).PAID ? 'bg-primary' : 
+                                        (order.status == T(com.example.warehouse.model.OrderStatus).SHIPPED ? 'bg-info' : 
+                                        (order.status == T(com.example.warehouse.model.OrderStatus).COMPLETED ? 'bg-success' : 'bg-dark'))))}">
+                                        <span th:text="${order.status}">CREATED</span>
+                                    </span>
+                                </td>
+                                <td th:text="${'$' + #numbers.formatDecimal(order.totalAmount, 1, 2)}">$100.00</td>
+                                <td th:text="${order.items.size()}">3</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a th:href="@{/orders/{id}(id=${order.id})}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-cog"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li th:if="${order.status == T(com.example.warehouse.model.OrderStatus).CREATED}">
+                                                    <form th:action="@{/orders/{id}/status/PAID(id=${order.id})}" method="post">
+                                                        <button type="submit" class="dropdown-item">Mark as Paid</button>
+                                                    </form>
+                                                </li>
+                                                <li th:if="${order.status == T(com.example.warehouse.model.OrderStatus).PAID}">
+                                                    <form th:action="@{/orders/{id}/status/SHIPPED(id=${order.id})}" method="post">
+                                                        <button type="submit" class="dropdown-item">Mark as Shipped</button>
+                                                    </form>
+                                                </li>
+                                                <li th:if="${order.status == T(com.example.warehouse.model.OrderStatus).SHIPPED}">
+                                                    <form th:action="@{/orders/{id}/status/COMPLETED(id=${order.id})}" method="post">
+                                                        <button type="submit" class="dropdown-item">Mark as Completed</button>
+                                                    </form>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item text-danger" 
+                                                            data-bs-toggle="modal" th:data-bs-target="'#deleteModal' + ${order.id}">
+                                                        Delete
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Delete Confirmation Modal -->
+                                    <div class="modal fade" th:id="'deleteModal' + ${order.id}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Confirm Delete</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you sure you want to delete order #<span th:text="${order.id}">1</span>?
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <form th:action="@{/orders/{id}/delete(id=${order.id})}" method="post">
+                                                        <button type="submit" class="btn btn-danger">Delete</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <!-- Pagination -->
+                    <nav th:if="${totalPages > 1}">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                                <a class="page-link" th:href="@{/orders(page=0, size=${size}, customerId=${selectedCustomerId}, status=${selectedStatus}, dateRange=${dateRange})}" aria-label="First">
+                                    <span aria-hidden="true">&laquo;&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled' : ''">
+                                <a class="page-link" th:href="@{/orders(page=${currentPage - 1}, size=${size}, customerId=${selectedCustomerId}, status=${selectedStatus}, dateRange=${dateRange})}" aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item" th:each="i : ${#numbers.sequence(0, totalPages - 1)}" 
+                                th:classappend="${currentPage == i} ? 'active' : ''">
+                                <a class="page-link" th:href="@{/orders(page=${i}, size=${size}, customerId=${selectedCustomerId}, status=${selectedStatus}, dateRange=${dateRange})}" th:text="${i + 1}">1</a>
+                            </li>
+                            <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''">
+                                <a class="page-link" th:href="@{/orders(page=${currentPage + 1}, size=${size}, customerId=${selectedCustomerId}, status=${selectedStatus}, dateRange=${dateRange})}" aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                            <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled' : ''">
+                                <a class="page-link" th:href="@{/orders(page=${totalPages - 1}, size=${size}, customerId=${selectedCustomerId}, status=${selectedStatus}, dateRange=${dateRange})}" aria-label="Last">
+                                    <span aria-hidden="true">&raquo;&raquo;</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
